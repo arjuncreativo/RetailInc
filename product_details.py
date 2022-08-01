@@ -11,6 +11,11 @@ routes = web.RouteTableDef()
 class RetailView(web.View):
 
     async def get(self):
+        """Get Product Details using Id
+
+        Returns:
+            _type_: Http Respons Json File
+        """
         id_ = self.request.match_info.get('id_', None)
         return web.json_response(await self.get_resp(id_))
 
@@ -21,7 +26,15 @@ class RetailView(web.View):
 
     @async_lru.alru_cache
     async def get_resp(self, id_):
-        print('reached')
+        """Combine the response from myretail api and 
+        Mongo db. 
+
+        Args:
+            id_ (_type_): Product id (str)
+
+        Returns:
+            _type_: Combined Json with Product and price info
+        """
         dct_resp_api = await utils.request_url(os.environ.get('PRODUCT_URL', '{}').format(id_))
         obj_mongo = utils.MongoWrapper()
         await obj_mongo.create_connection()
@@ -30,13 +43,23 @@ class RetailView(web.View):
         return dct_resp
 
     async def put_req(self, id_, body):
+        """Update the Product price if product exists in the mongodb
+
+        Args:
+            id_ (_type_): Product Id(str)
+            body (_type_): Json with Product price and currency code
+
+        Returns:
+            _type_: _description_
+        """
         obj_mongo = utils.MongoWrapper()
         
         await obj_mongo.create_connection()
+        #  Payload to update the product price
+        #  If the Id is not present in the db nothing will be updated
         payload = {"$set": {'value': body['value'],
                    'currency_code': body['currency_code']}}
         await obj_mongo.update_item(id_, payload)
-        print(self.get_resp.cache_info())
         self.get_resp.cache_clear()
         return 'Update Applied'
 
